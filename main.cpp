@@ -170,6 +170,7 @@ set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pick
             }
         }
     }
+    // MAYBE: Have it respect route order
     return reachableAreas;
 }
 
