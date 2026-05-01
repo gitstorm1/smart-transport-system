@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <print>
 #include <iterator>
 
 using namespace std;
@@ -57,7 +56,7 @@ public:
         if (s != nullptr) {
             stops.push_back(s);
         } else {
-            print("Error: Attempted to add a null stop to route: {}\n", routeName);
+            cout << "Error: Attempted to add a null stop to route: " << routeName << '\n';
         }
     }
 
@@ -122,16 +121,16 @@ void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
 int getValidatedChoice(string prompt, int maxRange) {
     int choice;
     while (true) {
-        print("{}", prompt);
+        cout << prompt;
         
         if (cin >> choice) {
             if (choice >= 1 && choice <= maxRange) {
                 return choice;
             } else {
-                print("Error: {} is out of range. Choose 1 to {}.\n", choice, maxRange);
+                cout << "Error: " << choice << " is out of range. Choose 1 to " << maxRange << ".\n";
             }
         } else {
-            print("Error: Please enter a numeric value.\n");
+            cout << "Error: Please enter a numeric value.\n";
             cin.clear();
             cin.ignore(1000, '\n');
         }
@@ -139,9 +138,9 @@ int getValidatedChoice(string prompt, int maxRange) {
 }
 
 int main() {
-    print("============================================================\n");
-    print("              WELCOME TO SMART TRANSPORT\n");
-    print("============================================================\n");
+    cout << "============================================================\n";
+    cout << "              WELCOME TO SMART TRANSPORT\n";
+    cout << "============================================================\n";
 
     // Data containers initialized in main
     vector<Stop> masterStops;
@@ -151,7 +150,7 @@ int main() {
     initializeMasterStops(masterStops);
     initializeRoutes(allRoutes, masterStops);
 
-    print("AVAILABLE AREAS:\n");
+    cout << "AVAILABLE AREAS:\n";
 
     set<string> uniqueAreas;
 
@@ -160,32 +159,32 @@ int main() {
     }
 
     for (int displayIndex = 0; const auto& area : uniqueAreas) {
-        print("[{}] {}\n", ++displayIndex, area);
+        cout << "[" << ++displayIndex << "] " << area << '\n';
     }
 
     int pickupAreaChoice = getValidatedChoice("\nEnter your pickup area (Number): ", uniqueAreas.size());
     string pickupArea = *next(uniqueAreas.begin(), pickupAreaChoice - 1);
 
-    print("\nSelected Pickup Area: {}\n", pickupArea);
+    cout << "\nSelected Pickup Area: " << pickupArea << "\n";
 
-    print("\n------------------------------------------------------------\n\n");
+    cout << "\n------------------------------------------------------------\n\n";
 
-    print("STOPS IN {}:\n", pickupArea);
+    cout << "STOPS IN " << pickupArea << ":\n";
 
     vector<Stop*> filteredStops;
 
     for (int displayIndex = 0; auto& stop : masterStops) {
         if (stop.getArea() != pickupArea) continue;
         filteredStops.push_back(&stop);
-        print("[{}] {}\n", ++displayIndex, stop.getFullName());
+        cout << "[" << ++displayIndex << "] " << stop.getFullName() << '\n';
     }
 
     int pickupStopChoice = getValidatedChoice("\nEnter your pickup stop (Number): ", filteredStops.size());;
     Stop* pickupStop = filteredStops[pickupStopChoice - 1];
 
-    print("Pickup Stop confirmed: {}\n", pickupStop->getFullName());
+    cout << "Pickup Stop confirmed: " << pickupStop->getFullName() << "\n";
 
-    print("\n------------------------------------------------------------\n\n");
+    cout << "\n------------------------------------------------------------\n\n";
 
     set<string> reachableAreas;
 
@@ -204,23 +203,23 @@ int main() {
         }
     }
 
-    print("DESTINATION AREAS REACHABLE FROM STOP \"{}\":\n", pickupStop->getFullName());
+    cout << "DESTINATION AREAS REACHABLE FROM STOP \"" << pickupStop->getFullName() << "\":\n";
 
     if (reachableAreas.empty()) {
-        print("No destinations reachable from this stop.\n");
+        cout << "No destinations reachable from this stop.\n";
         return 0;
     }
 
     for (int i = 0; const auto& area : reachableAreas) {
-        print("[{}] {}\n", ++i, area);
+        cout << "[" << ++i << "] " << area << '\n';
     }
 
     int dropoffAreaChoice = getValidatedChoice("\nEnter your dropoff area (Number): ", reachableAreas.size());
     string dropoffArea = *next(reachableAreas.begin(), dropoffAreaChoice - 1);
 
-    print("\nSelected Dropoff Area: {}\n", dropoffArea);
+    cout << "\nSelected Dropoff Area: " << dropoffArea << "\n";
 
-    print("\n------------------------------------------------------------\n\n");
+    cout << "\n------------------------------------------------------------\n\n";
 
     cout << "STOPS IN <DROPOFF AREA NAME> (ON CONNECTED ROUTES):" << '\n';
 
