@@ -137,6 +137,64 @@ int getValidatedChoice(string prompt, int maxRange) {
     }
 }
 
+// 1. Get all unique areas from the master list
+set<string> getAllUniqueAreas(const vector<Stop>& masterStops) {
+    set<string> uniqueAreas;
+    for (const auto& s : masterStops) {
+        uniqueAreas.insert(s.getArea());
+    }
+    return uniqueAreas;
+}
+
+// 2. Get all stops within a specific area
+vector<Stop*> getAllStopsInArea(vector<Stop>& masterStops, const string& targetArea) {
+    vector<Stop*> filtered;
+    for (auto& stop : masterStops) {
+        if (stop.getArea() == targetArea) {
+            filtered.push_back(&stop);
+        }
+    }
+    return filtered;
+}
+
+// 3. Get unique areas reachable after a specific pickup stop
+set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pickupStop) {
+    set<string> reachableAreas;
+    for (const auto& route : allRoutes) {
+        const auto& stopsInRoute = route.getStops();
+        auto it = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
+
+        if (it != stopsInRoute.end()) {
+            for (auto nextStop = it + 1; nextStop != stopsInRoute.end(); ++nextStop) {
+                reachableAreas.insert((*nextStop)->getArea());
+            }
+        }
+    }
+    return reachableAreas;
+}
+
+// 4. Get specific stops in a target area reachable from a pickup stop
+set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupStop, const string& targetArea) {
+    set<Stop*> uniqueDropoffStops;
+    for (const auto& route : allRoutes) {
+        const auto& stopsInRoute = route.getStops();
+        
+        auto itPickup = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
+
+        if (itPickup != stopsInRoute.end()) {
+            // Look at every stop AFTER the pickup stop
+            for (auto itDest = itPickup + 1; itDest != stopsInRoute.end(); ++itDest) {
+                Stop* potentialStop = *itDest;
+                
+                if (potentialStop->getArea() == targetArea) {
+                    uniqueDropoffStops.insert(potentialStop);
+                }
+            }
+        }
+    }
+    return uniqueDropoffStops;
+}
+
 int main() {
     cout << "============================================================\n";
     cout << "              WELCOME TO SMART TRANSPORT\n";
@@ -152,11 +210,7 @@ int main() {
 
     cout << "AVAILABLE AREAS:\n";
 
-    set<string> uniqueAreas;
-
-    for (const auto& s : masterStops) {
-        uniqueAreas.insert(s.getArea());
-    }
+    set<string> uniqueAreas = getAllUniqueAreas(masterStops);
 
     for (int displayIndex = 0; const auto& area : uniqueAreas) {
         cout << "[" << ++displayIndex << "] " << area << '\n';
@@ -171,37 +225,20 @@ int main() {
 
     cout << "STOPS IN " << pickupArea << ":\n";
 
-    vector<Stop*> filteredStops;
+    vector<Stop*> filteredPickupStops = getAllStopsInArea(masterStops, pickupArea);
 
-    for (int displayIndex = 0; auto& stop : masterStops) {
-        if (stop.getArea() != pickupArea) continue;
-        filteredStops.push_back(&stop);
-        cout << "[" << ++displayIndex << "] " << stop.getFullName() << '\n';
+    for (int i = 0; i < filteredPickupStops.size(); ++i) {
+        cout << "[" << i + 1 << "] " << filteredPickupStops[i]->getFullName() << '\n';
     }
 
-    int pickupStopChoice = getValidatedChoice("\nEnter your pickup stop (Number): ", filteredStops.size());;
-    Stop* pickupStop = filteredStops[pickupStopChoice - 1];
+    int pickupStopChoice = getValidatedChoice("\nEnter your pickup stop (Number): ", filteredPickupStops.size());;
+    Stop* pickupStop = filteredPickupStops[pickupStopChoice - 1];
 
     cout << "Pickup Stop confirmed: " << pickupStop->getFullName() << "\n";
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    set<string> reachableAreas;
-
-    for (const auto& route : allRoutes) {
-        const auto& stopsInRoute = route.getStops();
-        
-        // Find the pickupStop in this route
-        auto it = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
-
-        if (it != stopsInRoute.end()) {
-            // If found, every stop AFTER this one is a valid destination
-            // we use it + 1 to skip the pickup stop itself
-            for (auto nextStop = it + 1; nextStop != stopsInRoute.end(); ++nextStop) {
-                reachableAreas.insert((*nextStop)->getArea());
-            }
-        }
-    }
+    set<string> reachableAreas = getReachableAreasFromStop(allRoutes, pickupStop);
 
     cout << "DESTINATION AREAS REACHABLE FROM STOP \"" << pickupStop->getFullName() << "\":\n";
 
@@ -221,11 +258,21 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    cout << "STOPS IN <DROPOFF AREA NAME> (ON CONNECTED ROUTES):" << '\n';
+    set<Stop*> uniqueDropoffStops = getReachableStopsInArea(allRoutes, pickupStop, dropoffArea); // To avoid duplicates if multiple routes hit the same stop
 
-    cout << "Enter your dropoff stop (Number):" << '\n';
+    // 2. Display the filtered drop-off stops
+    cout << "STOPS IN " << dropoffArea << " (REACHABLE FROM " << pickupStop->getArea() << "):\n";
+    for (int i = 0; const auto& dropoffStop : uniqueDropoffStops) {
+        cout << "[" << ++i << "] " << dropoffStop->getFullName() << "\n";
+    }
 
-    cout << "------------------------------------------------------------" << '\n';
+    // 3. Get User Choice
+    int dropoffStopChoice = getValidatedChoice("\nEnter your drop-off stop (Number): ", uniqueDropoffStops.size());
+    Stop* dropoffStop = *next(uniqueDropoffStops.begin(), dropoffStopChoice - 1);
+
+    cout << "Drop-off Stop confirmed: " << dropoffStop->getFullName() << "\n";
+
+    cout << "\n------------------------------------------------------------\n\n";
 
     cout << "AVAILABLE BUSES FOR THIS ROUTE:" << '\n';
 
