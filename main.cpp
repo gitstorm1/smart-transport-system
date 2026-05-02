@@ -377,20 +377,62 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    cout << "AVAILABLE BUSES FOR THIS ROUTE:" << '\n';
+    cout << "AVAILABLE BUSES FOR THIS ROUTE:\n";
 
-    cout << "Select your bus (Number):" << '\n';
+    vector<Bus*> validBuses;
+    double travelDistance = abs(dropoffStop->getDistance() - pickupStop->getDistance());
 
-    cout << "------------------------------------------------------------" << '\n';
+    for (Bus* bus : fleet.allBuses) {
+        Route* r = bus->getAssignedRoute();
+        if (!r) continue; // Skip buses with no route assigned
 
-    cout << "TRIP SUMMARY:" << '\n';
+        const auto& stops = r->getStops();
+        auto itPickup = find(stops.begin(), stops.end(), pickupStop);
+        auto itDropoff = find(stops.begin(), stops.end(), dropoffStop);
 
-    cout << R"(Route:    Central Station -> Tech Park
-Distance: 8.4 units
-Fare:     $12.50
+        // Check if both stops exist on this bus's route AND pickup is before dropoff
+        if (itPickup != stops.end() && itDropoff != stops.end() && itPickup < itDropoff) {
+            validBuses.push_back(bus);
+            
+            // Display bus info and the calculated fare for this specific bus type
+            cout << "[" << validBuses.size() << "] " 
+                 << bus->getBusNumber() << " (" << bus->getBusType() << ") | "
+                 << "Fare: Rs " << bus->calculateFare(travelDistance) << "\n";
+        }
+    }
 
-Finalize payment? (y/n): y
-)";
+    if (validBuses.empty()) {
+        cout << "No buses currently serving this specific connection.\n";
+        return 0;
+    }
+
+    int busChoice = getValidatedChoice("\nSelect your bus (Number): ", validBuses.size());
+    Bus* selectedBus = validBuses[busChoice - 1];
+
+    cout << "\n------------------------------------------------------------\n\n";
+
+    double finalFare = selectedBus->calculateFare(travelDistance);
+
+    cout << "============================================================\n";
+    cout << "                    FINAL TRIP SUMMARY\n";
+    cout << "============================================================\n";
+    cout << "PICKUP:    " << pickupStop->getFullName() << "\n";
+    cout << "DROPOFF:   " << dropoffStop->getFullName() << "\n";
+    cout << "DISTANCE:  " << travelDistance << " km\n";
+    cout << "------------------------------------------------------------\n";
+    cout << "BUS DETAILS:\n";
+    cout << "   Number:    " << selectedBus->getBusNumber() << "\n";
+    cout << "   Type:      " << selectedBus->getBusType() << "\n";
+    cout << "   Status:    " << (selectedBus->isOvercrowded() ? "Standing Room Only" : "Seats Available") << "\n";
+    cout << "------------------------------------------------------------\n";
+    cout << "FARE DETAILS:\n";
+    cout << "   Rate:      Rs " << selectedBus->getFareRate() << "/km\n";
+    cout << "   Min Fare:  Rs " << selectedBus->getMinimumFare() << "\n";
+    cout << "   Max Fare:  Rs " << selectedBus->getMaximumFare() << "\n";
+    cout << "   TOTAL:     Rs " << finalFare << "\n";
+    cout << "============================================================\n\n";
+
+    
 
     cout << "[SUCCESS] Ticket registered!" << '\n';
 
