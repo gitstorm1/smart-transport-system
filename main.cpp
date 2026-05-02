@@ -3,88 +3,10 @@
 #include <vector>
 #include <set>
 #include <iterator>
+#include <Stop.h>
+#include <Route.h>
 
 using namespace std;
-
-class Stop {
-private:
-    string area;
-    string block;
-    string landmark;
-    float distance;
-
-public:
-    Stop(string a, string b, string l, float d) 
-        : area(a), block(b), landmark(l), distance(d) {}
-
-    friend Stop* findStop(vector<Stop>& masterStops, const string& area, const string& block, const string& landmark);
-    
-    string getArea() const {
-        return area;
-    }
-
-    string getBlock() const {
-        return block;
-    }
-
-    string getLandmark() const {
-        return landmark;
-    }
-
-    float getDistance() const { 
-        return distance; 
-    }
-    
-    string getFullName() const {
-        string name = area + " (Block " + block + ")";
-        if (!landmark.empty()) {
-            name += " - near " + landmark;
-        }
-        return name;
-    }
-};
-
-class Route {
-private:
-    string routeName;
-    vector<Stop*> stops;
-
-public:
-    Route(string name) : routeName(name) {}
-
-    void addStop(Stop* s) {
-        if (s != nullptr) {
-            stops.push_back(s);
-        } else {
-            cout << "Error: Attempted to add a null stop to route: " << routeName << '\n';
-        }
-    }
-
-    vector<Stop*> getStops() const {
-        return stops;
-    }
-
-    // Displays the whole route (i.e. all stops)
-    void displayRoute() const {
-        cout << "\n--- Route: " << routeName << " ---" << endl;
-        for (int i = 0; i < stops.size(); i++) {
-            cout << i << ". " << stops[i]->getFullName() << " ["
-                << stops[i]->getDistance() << " km]" << endl;
-        }
-    }
-};
-
-Stop* findStop(vector<Stop>& masterStops, const string& area, const string& block, const string& landmark) {
-    for (auto& s : masterStops) {
-        if (s.area == area && 
-            s.block == block && 
-            s.landmark == landmark) {
-            return &s;
-        }
-    }
-
-    return nullptr;
-}
 
 void initializeMasterStops(vector<Stop>& masterStops) {
     masterStops.reserve(100); 
@@ -259,7 +181,7 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    set<Stop*> uniqueDropoffStops = getReachableStopsInArea(allRoutes, pickupStop, dropoffArea); // To avoid duplicates if multiple routes hit the same stop
+    set<Stop*> uniqueDropoffStops = getReachableStopsInArea(allRoutes, pickupStop, dropoffArea);
 
     // 2. Display the filtered drop-off stops
     cout << "STOPS IN " << dropoffArea << " (REACHABLE FROM " << pickupStop->getArea() << "):\n";

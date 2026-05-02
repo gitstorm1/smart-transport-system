@@ -7,11 +7,13 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe",
-                "-lstdc++exp",
                 "-std=c++26",
+                "-lstdc++exp",
+                "${workspaceFolder}\\main.cpp",        // Explicitly include main
+                "${workspaceFolder}\\src\\*.cpp",      // Compile all .cpp files in src
+                "-I${workspaceFolder}\\include",       // Add include folder to search path
+                "-o",
+                "${workspaceFolder}\\main.exe"         // Output to a fixed location
             ],
             "options": {
                 "cwd": "C:/msys64/ucrt64/bin"
