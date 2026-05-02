@@ -8,6 +8,105 @@
 
 using namespace std;
 
+#include <iostream>
+#include <string>
+#include <vector>
+#include <set>
+#include <iterator>
+
+using namespace std;
+
+class Bus {
+protected:
+    string busNumber;
+    string busType;
+    int capacity;
+    int currentPassengers;
+    double baseFareRate; // per km fare rate
+    Route* assignedRoute;
+
+public:
+    Bus(string busNum, string busTyp, int cap, double fareRate) 
+        : busNumber(busNum), busType(busTyp), capacity(cap), currentPassengers(0), 
+          baseFareRate(fareRate), assignedRoute(nullptr) {}
+    
+    virtual ~Bus() {}
+    
+    virtual double calculateFare(double distance) const = 0;
+    
+    virtual bool boardPassenger() {
+        if (currentPassengers < capacity) {
+            ++currentPassengers;
+            return true;
+        }
+        return false;
+    }
+
+    virtual void displayBasicInfo() const {
+        cout << "=================================\n";
+        cout << "Bus Number: " << busNumber << "\n";
+        cout << "Type: " << busType << "\n";
+        cout << "Capacity: " << capacity << " passengers\n";
+        cout << "Current Passengers: " << currentPassengers << "\n";
+        cout << "Base Fare Rate: Rs " << baseFareRate << "/km\n";
+        cout << "=================================\n";
+    }
+    
+    void assignRoute(Route* route) {
+        assignedRoute = route;
+    }
+    
+    string getBusNumber() const { return busNumber; }
+    string getBusType() const { return busType; }
+    int getCapacity() const { return capacity; }
+    int getCurrentPassengers() const { return currentPassengers; }
+    double getBaseFareRate() const { return baseFareRate; }
+    Route* getAssignedRoute() const { return assignedRoute; }
+};
+
+class MiniBus : public Bus {
+private:
+    int maxOvercrowding;  // Maximum passengers when overcrowded
+    
+public:
+    MiniBus(string busNum, double fareRate) 
+        : Bus(busNum, "Minibus", 26, fareRate), maxOvercrowding(40) {}
+    
+    double calculateFare(double distance) const override {
+        // Minibus has cheaper fare: Rs 15 per km base + Rs 10 fixed
+        double fare = 10.0 + (distance * 15.0);
+        return fare;
+    }
+    
+    // Override boardPassenger to allow overcrowding
+    bool boardPassenger() override {
+        int effectiveCapacity = maxOvercrowding;
+        
+        if (currentPassengers < effectiveCapacity) {
+            ++currentPassengers;
+            return true;
+        }
+
+        return false;
+    }
+    
+    void displayBasicInfo() const override {
+        Bus::displayBasicInfo();
+        cout << "Max Overcrowding Limit: " << maxOvercrowding << " passengers\n";
+        if (isOvercrowded()) {
+            cout << "OVERCROWDING STATUS: ACTIVE\n";
+        } else {
+            cout << "OVERCROWDING STATUS: NORMAL\n";
+        }
+    }
+    
+    void setOvercrowding(bool allow, int maxLimit = 40) {
+        maxOvercrowding = maxLimit;
+    }
+    
+    bool isOvercrowded() const { return currentPassengers > capacity; }
+};
+
 void initializeMasterStops(vector<Stop>& masterStops) {
     masterStops.reserve(100); 
     masterStops.emplace_back("North Sector", "A", "Gate 1", 0.0);
