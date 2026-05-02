@@ -3,83 +3,39 @@
 #include <vector>
 #include <set>
 #include <iterator>
+#include <algorithm>
 #include <Stop.h>
 #include <Route.h>
 
 using namespace std;
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <set>
-#include <iterator>
-
-using namespace std;
-
 class Bus {
+private:
+    int currentPassengers;
 protected:
     string busNumber;
     string busType;
     int capacity;
-    int currentPassengers;
-    double baseFareRate; // per km fare rate
+    double fareRate; // per km fare rate
+    double minimumFare;
+    double maximumFare;
     Route* assignedRoute;
+    int maxOvercrowding;  // Maximum passengers, including those standing (overcrowding)
 
 public:
-    Bus(string busNum, string busTyp, int cap, double fareRate) 
-        : busNumber(busNum), busType(busTyp), capacity(cap), currentPassengers(0), 
-          baseFareRate(fareRate), assignedRoute(nullptr) {}
+    Bus(string busNum, string busTyp, int cap, double fareRat, double minFare, double maxFare) 
+        :
+            busNumber(busNum),
+            busType(busTyp),
+            capacity(cap), maxOvercrowding(cap), currentPassengers(0),
+            fareRate(fareRat), minimumFare(minFare), maximumFare(maxFare),
+            assignedRoute(nullptr) {}
     
     virtual ~Bus() {}
     
     virtual double calculateFare(double distance) const = 0;
-    
+
     virtual bool boardPassenger() {
-        if (currentPassengers < capacity) {
-            ++currentPassengers;
-            return true;
-        }
-        return false;
-    }
-
-    virtual void displayBasicInfo() const {
-        cout << "=================================\n";
-        cout << "Bus Number: " << busNumber << "\n";
-        cout << "Type: " << busType << "\n";
-        cout << "Capacity: " << capacity << " passengers\n";
-        cout << "Current Passengers: " << currentPassengers << "\n";
-        cout << "Base Fare Rate: Rs " << baseFareRate << "/km\n";
-        cout << "=================================\n";
-    }
-    
-    void assignRoute(Route* route) {
-        assignedRoute = route;
-    }
-    
-    string getBusNumber() const { return busNumber; }
-    string getBusType() const { return busType; }
-    int getCapacity() const { return capacity; }
-    int getCurrentPassengers() const { return currentPassengers; }
-    double getBaseFareRate() const { return baseFareRate; }
-    Route* getAssignedRoute() const { return assignedRoute; }
-};
-
-class MiniBus : public Bus {
-private:
-    int maxOvercrowding;  // Maximum passengers when overcrowded
-    
-public:
-    MiniBus(string busNum, double fareRate) 
-        : Bus(busNum, "Minibus", 26, fareRate), maxOvercrowding(40) {}
-    
-    double calculateFare(double distance) const override {
-        // Minibus has cheaper fare: Rs 15 per km base + Rs 10 fixed
-        double fare = 10.0 + (distance * 15.0);
-        return fare;
-    }
-    
-    // Override boardPassenger to allow overcrowding
-    bool boardPassenger() override {
         int effectiveCapacity = maxOvercrowding;
         
         if (currentPassengers < effectiveCapacity) {
@@ -89,22 +45,87 @@ public:
 
         return false;
     }
-    
-    void displayBasicInfo() const override {
-        Bus::displayBasicInfo();
+
+    virtual void displayBasicInfo() const {
+        cout << "=================================\n";
+        cout << "Bus Number: " << busNumber << "\n";
+        cout << "Type: " << busType << "\n";
+        cout << "Capacity: " << capacity << " passengers\n";
+        cout << "Current Passengers: " << currentPassengers << "\n";
+        cout << "Fare Rate: Rs " << fareRate << "/km\n";
+        cout << "Minimum Fare: Rs " << minimumFare << "\n";
+        cout << "Maximum Fare: Rs " << maximumFare << "\n";
         cout << "Max Overcrowding Limit: " << maxOvercrowding << " passengers\n";
         if (isOvercrowded()) {
             cout << "OVERCROWDING STATUS: ACTIVE\n";
         } else {
             cout << "OVERCROWDING STATUS: NORMAL\n";
         }
+        cout << "=================================\n";
     }
     
-    void setOvercrowding(bool allow, int maxLimit = 40) {
+    virtual void assignRoute(Route* route) {
+        assignedRoute = route;
+    }
+
+    virtual bool setOvercrowdingLimit(int maxLimit) {
+        if (maxLimit < capacity) return false;
         maxOvercrowding = maxLimit;
+        return true;
     }
     
-    bool isOvercrowded() const { return currentPassengers > capacity; }
+    virtual bool isOvercrowded() const { 
+        return currentPassengers > capacity;
+    }
+    
+    string getBusNumber() const { return busNumber; }
+    string getBusType() const { return busType; }
+    int getCapacity() const { return capacity; }
+    int getMaxOvercrowding() const { return maxOvercrowding; }
+    int getCurrentPassengers() const { return currentPassengers; }
+    double getFareRate() const { return fareRate; }
+    double getMinimumFare() const { return minimumFare; }
+    double getMaximumFare() const { return maximumFare; }
+    Route* getAssignedRoute() const { return assignedRoute; }
+};
+
+class MiniBus : public Bus {
+public:
+    MiniBus(string busNum) 
+        : Bus(busNum, "Minibus", 26, 3, 50, 100) {
+        setOvercrowdingLimit(26 + 45);
+    }
+
+    double calculateFare(double distance) const override {
+        double fare = min(maximumFare, max(minimumFare, distance * fareRate));
+        return fare;
+    }
+};
+
+class ElectricBus : public Bus {
+public:
+    ElectricBus(string busNum) 
+        : Bus(busNum, "Electric bus", 32, 5, 80, 120) {
+        setOvercrowdingLimit(40 + 40);
+    }
+
+    double calculateFare(double distance) const override {
+        double fare = min(maximumFare, max(minimumFare, distance * fareRate));
+        return fare;
+    }
+};
+
+class DoubleDecker : public Bus {
+public:
+    DoubleDecker(string busNum) 
+        : Bus(busNum, "Double-Decker bus", 80, 7, 100, 150) {
+        setOvercrowdingLimit(80 + 40);
+    }
+
+    double calculateFare(double distance) const override {
+        double fare = min(maximumFare, max(minimumFare, distance * fareRate));
+        return fare;
+    }
 };
 
 void initializeMasterStops(vector<Stop>& masterStops) {
