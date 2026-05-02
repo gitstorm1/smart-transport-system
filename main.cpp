@@ -160,6 +160,63 @@ void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
     allRoutes.push_back(r3);
 }
 
+struct BusFleet {
+    vector<Bus*> allBuses;
+    
+    ~BusFleet() {
+        for (Bus* bus : allBuses) {
+            delete bus;
+        }
+    }
+};
+
+// Initialize all buses and assign to routes
+BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
+    BusFleet fleet;
+    
+    MiniBus* mini1 = new MiniBus("MIN-101");
+    MiniBus* mini2 = new MiniBus("MIN-102");
+    MiniBus* mini3 = new MiniBus("MIN-103");
+    MiniBus* mini4 = new MiniBus("MIN-104");
+    
+    ElectricBus* electric1 = new ElectricBus("ELE-201");
+    ElectricBus* electric2 = new ElectricBus("ELE-202");
+    
+    DoubleDecker* dd1 = new DoubleDecker("DD-301");
+    DoubleDecker* dd2 = new DoubleDecker("DD-302");
+    
+    // Assign buses to specific routes
+    
+    if (allRoutes.size() > 0) {
+        electric1->assignRoute(&allRoutes[0]);
+        dd1->assignRoute(&allRoutes[0]);
+        mini1->assignRoute(&allRoutes[0]);
+    }
+    
+    if (allRoutes.size() > 1) {
+        mini2->assignRoute(&allRoutes[1]);
+        mini3->assignRoute(&allRoutes[1]);
+        electric2->assignRoute(&allRoutes[1]);
+    }
+    
+    if (allRoutes.size() > 2) {
+        mini4->assignRoute(&allRoutes[2]);
+        dd2->assignRoute(&allRoutes[2]);
+    }
+    
+    // Add all buses to fleet
+    fleet.allBuses.push_back(mini1);
+    fleet.allBuses.push_back(mini2);
+    fleet.allBuses.push_back(mini3);
+    fleet.allBuses.push_back(mini4);
+    fleet.allBuses.push_back(electric1);
+    fleet.allBuses.push_back(electric2);
+    fleet.allBuses.push_back(dd1);
+    fleet.allBuses.push_back(dd2);
+    
+    return fleet;
+}
+
 int getValidatedChoice(string prompt, int maxRange) {
     int choice;
     while (true) {
@@ -179,7 +236,7 @@ int getValidatedChoice(string prompt, int maxRange) {
     }
 }
 
-// 1. Get all unique areas from the master list
+// Get all unique areas from the master list
 set<string> getAllUniqueAreas(const vector<Stop>& masterStops) {
     set<string> uniqueAreas;
     for (const auto& s : masterStops) {
@@ -188,7 +245,7 @@ set<string> getAllUniqueAreas(const vector<Stop>& masterStops) {
     return uniqueAreas;
 }
 
-// 2. Get all stops within a specific area
+// Get all stops within a specific area
 vector<Stop*> getAllStopsInArea(vector<Stop>& masterStops, const string& targetArea) {
     vector<Stop*> filtered;
     for (auto& stop : masterStops) {
@@ -199,7 +256,7 @@ vector<Stop*> getAllStopsInArea(vector<Stop>& masterStops, const string& targetA
     return filtered;
 }
 
-// 3. Get unique areas reachable after a specific pickup stop
+// Get unique areas reachable after a specific pickup stop
 set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pickupStop) {
     set<string> reachableAreas;
     for (const auto& route : allRoutes) {
@@ -216,7 +273,7 @@ set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pick
     return reachableAreas;
 }
 
-// 4. Get specific stops in a target area reachable from a pickup stop
+// Get specific stops in a target area reachable from a pickup stop
 set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupStop, const string& targetArea) {
     set<Stop*> uniqueDropoffStops;
     for (const auto& route : allRoutes) {
@@ -250,6 +307,9 @@ int main() {
     // Call separate functions to populate data
     initializeMasterStops(masterStops);
     initializeRoutes(allRoutes, masterStops);
+
+    // Initialize bus fleet
+    BusFleet fleet = initializeMasterBuses(allRoutes);
 
     cout << "AVAILABLE AREAS:\n";
 
