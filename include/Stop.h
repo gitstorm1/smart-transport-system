@@ -1,24 +1,28 @@
-#ifndef ROUTE_H
-#define ROUTE_H
+#ifndef STOP_H
+#define STOP_H
 
 #include <string>
 #include <vector>
-#include "Stop.h"
 
-class Route {
+class Stop {
 private:
-    std::string routeName;
-    std::vector<Stop*> stops;
+    std::string area;
+    std::string block;
+    std::string landmark;
+    float distance;
 
 public:
-    Route(std::string name);
+    Stop(std::string a, std::string b, std::string l, float d);
 
-    void addStop(Stop* s);
-
-    std::vector<Stop*> getStops() const;
-
-    // Displays the whole route (i.e. all stops)
-    void displayRoute() const;
+    friend Stop* findStop(std::vector<Stop>& masterStops, const std::string& area, const std::string& block, const std::string& landmark);
+    
+    std::string getArea() const;
+    std::string getBlock() const;
+    std::string getLandmark() const;
+    float getDistance() const;
+    std::string getFullName() const;
 };
+
+Stop* findStop(std::vector<Stop>& masterStops, const std::string& area, const std::string& block, const std::string& landmark);
 
 #endif
