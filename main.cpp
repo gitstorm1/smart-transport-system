@@ -23,21 +23,22 @@ protected:
     int maxOvercrowding;  // Maximum passengers, including those standing (overcrowding)
 
 public:
-    Bus(string busNum, string busTyp, int cap, double fareRat, double minFare, double maxFare) 
+    Bus(string busNum, string busTyp, int cap, double fareRat, double minFare, double maxFare)
         :
-            busNumber(busNum),
-            busType(busTyp),
-            capacity(cap), maxOvercrowding(cap), currentPassengers(0),
-            fareRate(fareRat), minimumFare(minFare), maximumFare(maxFare),
-            assignedRoute(nullptr) {}
-    
+        busNumber(busNum),
+        busType(busTyp),
+        capacity(cap), maxOvercrowding(cap), currentPassengers(0),
+        fareRate(fareRat), minimumFare(minFare), maximumFare(maxFare),
+        assignedRoute(nullptr) {
+    }
+
     virtual ~Bus() {}
-    
+
     virtual double calculateFare(double distance) const = 0;
 
     virtual bool boardPassenger() {
         int effectiveCapacity = maxOvercrowding;
-        
+
         if (currentPassengers < effectiveCapacity) {
             ++currentPassengers;
             return true;
@@ -58,12 +59,13 @@ public:
         cout << "Max Overcrowding Limit: " << maxOvercrowding << " passengers\n";
         if (isOvercrowded()) {
             cout << "OVERCROWDING STATUS: ACTIVE\n";
-        } else {
+        }
+        else {
             cout << "OVERCROWDING STATUS: NORMAL\n";
         }
         cout << "=================================\n";
     }
-    
+
     virtual void assignRoute(Route* route) {
         assignedRoute = route;
     }
@@ -73,11 +75,11 @@ public:
         maxOvercrowding = maxLimit;
         return true;
     }
-    
-    virtual bool isOvercrowded() const { 
+
+    virtual bool isOvercrowded() const {
         return currentPassengers > capacity;
     }
-    
+
     string getBusNumber() const { return busNumber; }
     string getBusType() const { return busType; }
     int getCapacity() const { return capacity; }
@@ -91,7 +93,7 @@ public:
 
 class MiniBus : public Bus {
 public:
-    MiniBus(string busNum) 
+    MiniBus(string busNum)
         : Bus(busNum, "Minibus", 26, 3, 50, 100) {
         setOvercrowdingLimit(26 + 45);
     }
@@ -104,7 +106,7 @@ public:
 
 class ElectricBus : public Bus {
 public:
-    ElectricBus(string busNum) 
+    ElectricBus(string busNum)
         : Bus(busNum, "Electric bus", 32, 5, 80, 120) {
         setOvercrowdingLimit(40 + 40);
     }
@@ -117,7 +119,7 @@ public:
 
 class DoubleDecker : public Bus {
 public:
-    DoubleDecker(string busNum) 
+    DoubleDecker(string busNum)
         : Bus(busNum, "Double-Decker bus", 80, 7, 100, 150) {
         setOvercrowdingLimit(80 + 40);
     }
@@ -129,7 +131,7 @@ public:
 };
 
 void initializeMasterStops(vector<Stop>& masterStops) {
-    masterStops.reserve(100); 
+    masterStops.reserve(100);
     masterStops.emplace_back("North Sector", "A", "Gate 1", 0.0);
     masterStops.emplace_back("Downtown", "C", "Central Library", 5.2);
     masterStops.emplace_back("Industrial Zone", "B", "Steel Mill", 12.5);
@@ -162,7 +164,7 @@ void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
 
 struct BusFleet {
     vector<Bus*> allBuses;
-    
+
     ~BusFleet() {
         for (Bus* bus : allBuses) {
             delete bus;
@@ -173,37 +175,37 @@ struct BusFleet {
 // Initialize all buses and assign to routes
 BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
     BusFleet fleet;
-    
+
     MiniBus* mini1 = new MiniBus("MIN-101");
     MiniBus* mini2 = new MiniBus("MIN-102");
     MiniBus* mini3 = new MiniBus("MIN-103");
     MiniBus* mini4 = new MiniBus("MIN-104");
-    
+
     ElectricBus* electric1 = new ElectricBus("ELE-201");
     ElectricBus* electric2 = new ElectricBus("ELE-202");
-    
+
     DoubleDecker* dd1 = new DoubleDecker("DD-301");
     DoubleDecker* dd2 = new DoubleDecker("DD-302");
-    
+
     // Assign buses to specific routes
-    
+
     if (allRoutes.size() > 0) {
         electric1->assignRoute(&allRoutes[0]);
         dd1->assignRoute(&allRoutes[0]);
         mini1->assignRoute(&allRoutes[0]);
     }
-    
+
     if (allRoutes.size() > 1) {
         mini2->assignRoute(&allRoutes[1]);
         mini3->assignRoute(&allRoutes[1]);
         electric2->assignRoute(&allRoutes[1]);
     }
-    
+
     if (allRoutes.size() > 2) {
         mini4->assignRoute(&allRoutes[2]);
         dd2->assignRoute(&allRoutes[2]);
     }
-    
+
     // Add all buses to fleet
     fleet.allBuses.push_back(mini1);
     fleet.allBuses.push_back(mini2);
@@ -213,7 +215,7 @@ BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
     fleet.allBuses.push_back(electric2);
     fleet.allBuses.push_back(dd1);
     fleet.allBuses.push_back(dd2);
-    
+
     return fleet;
 }
 
@@ -221,14 +223,16 @@ int getValidatedChoice(string prompt, int maxRange) {
     int choice;
     while (true) {
         cout << prompt;
-        
+
         if (cin >> choice) {
             if (choice >= 1 && choice <= maxRange) {
                 return choice;
-            } else {
+            }
+            else {
                 cout << "Error: " << choice << " is out of range. Choose 1 to " << maxRange << ".\n";
             }
-        } else {
+        }
+        else {
             cout << "Error: Please enter a numeric value.\n";
             cin.clear();
             cin.ignore(1000, '\n');
@@ -278,14 +282,14 @@ set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupS
     set<Stop*> uniqueDropoffStops;
     for (const auto& route : allRoutes) {
         const auto& stopsInRoute = route.getStops();
-        
+
         auto itPickup = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
 
         if (itPickup != stopsInRoute.end()) {
             // Look at every stop AFTER the pickup stop
             for (auto itDest = itPickup + 1; itDest != stopsInRoute.end(); ++itDest) {
                 Stop* potentialStop = *itDest;
-                
+
                 if (potentialStop->getArea() == targetArea) {
                     uniqueDropoffStops.insert(potentialStop);
                 }
@@ -393,11 +397,10 @@ int main() {
         // Check if both stops exist on this bus's route AND pickup is before dropoff
         if (itPickup != stops.end() && itDropoff != stops.end() && itPickup < itDropoff) {
             validBuses.push_back(bus);
-            
+
             // Display bus info and the calculated fare for this specific bus type
-            cout << "[" << validBuses.size() << "] " 
-                 << bus->getBusNumber() << " (" << bus->getBusType() << ") | "
-                 << "Fare: Rs " << bus->calculateFare(travelDistance) << "\n";
+            cout << "[" << validBuses.size() << "] "
+                << bus->getBusNumber() << " (" << bus->getBusType() << ")\n";
         }
     }
 
@@ -411,28 +414,75 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    double finalFare = selectedBus->calculateFare(travelDistance);
+    bool confirmed = false;
 
-    cout << "============================================================\n";
-    cout << "                    FINAL TRIP SUMMARY\n";
-    cout << "============================================================\n";
-    cout << "PICKUP:    " << pickupStop->getFullName() << "\n";
-    cout << "DROPOFF:   " << dropoffStop->getFullName() << "\n";
-    cout << "DISTANCE:  " << travelDistance << " km\n";
-    cout << "------------------------------------------------------------\n";
-    cout << "BUS DETAILS:\n";
-    cout << "   Number:    " << selectedBus->getBusNumber() << "\n";
-    cout << "   Type:      " << selectedBus->getBusType() << "\n";
-    cout << "   Status:    " << (selectedBus->isOvercrowded() ? "Standing Room Only" : "Seats Available") << "\n";
-    cout << "------------------------------------------------------------\n";
-    cout << "FARE DETAILS:\n";
-    cout << "   Rate:      Rs " << selectedBus->getFareRate() << "/km\n";
-    cout << "   Min Fare:  Rs " << selectedBus->getMinimumFare() << "\n";
-    cout << "   Max Fare:  Rs " << selectedBus->getMaximumFare() << "\n";
-    cout << "   TOTAL:     Rs " << finalFare << "\n";
-    cout << "============================================================\n\n";
+    while (!confirmed) {
+        // Calculate Fare for the current selection
+        double finalFare = selectedBus->calculateFare(travelDistance);
 
-    
+        // Display the Detailed Summary
+        cout << "============================================================\n";
+        cout << "                    FINAL TRIP SUMMARY\n";
+        cout << "============================================================\n";
+        cout << "PICKUP:    " << pickupStop->getFullName() << "\n";
+        cout << "DROPOFF:   " << dropoffStop->getFullName() << "\n";
+        cout << "DISTANCE:  " << travelDistance << " km\n";
+        cout << "------------------------------------------------------------\n";
+        cout << "BUS DETAILS:\n";
+        cout << "   Number:    " << selectedBus->getBusNumber() << "\n";
+        cout << "   Type:      " << selectedBus->getBusType() << "\n";
+        cout << "   Status:    " << (selectedBus->isOvercrowded() ? "Standing Room Only" : "Seats Available") << "\n";
+        cout << "------------------------------------------------------------\n";
+        cout << "FARE DETAILS:\n";
+        cout << "   Rate:      Rs " << selectedBus->getFareRate() << "/km\n";
+        cout << "   Min Fare:  Rs " << selectedBus->getMinimumFare() << "\n";
+        cout << "   Max Fare:  Rs " << selectedBus->getMaximumFare() << "\n";
+        cout << "   TOTAL:     Rs " << finalFare << "\n";
+        cout << "============================================================\n";
+
+        // 3 Options
+        cout << "\nWHAT WOULD YOU LIKE TO DO?\n";
+        cout << "[1] Finalize Payment and Board\n";
+        cout << "[2] Change Bus (View List Again)\n";
+        cout << "[3] Cancel Everything\n\n";
+
+        int postSummaryChoice = getValidatedChoice("Enter choice: ", 3);
+
+        if (postSummaryChoice == 1) {
+            // OPTION 1: BOARDING
+            if (selectedBus->boardPassenger()) {
+                cout << "\n[SUCCESS] Payment processed. You have boarded " << selectedBus->getBusNumber() << "!\n";
+                // Logic for ticket here
+                confirmed = true; // Exit the loop
+            }
+            else {
+                cout << "\n[FAILED] Sorry, this bus reached its limit while you were viewing the summary.\n";
+                cout << "Please select another bus.\n\n";
+                // Logic falls through to selection again
+                goto reselect;
+            }
+        }
+        else if (postSummaryChoice == 2) {
+            // OPTION 2: CHANGE BUS
+        reselect: // Label for the re-selection logic
+            cout << "\nRE-SELECTING BUS:\n";
+            for (int i = 0; i < validBuses.size(); ++i) {
+                cout << "[" << i + 1 << "] " << validBuses[i]->getBusNumber()
+                    << " (" << validBuses[i]->getBusType() << ")\n";
+            }
+            int newChoice = getValidatedChoice("\nSelect your bus (Number): ", validBuses.size());
+            selectedBus = validBuses[newChoice - 1];
+            cout << "\n------------------------------------------------------------\n\n";
+            // Loop continues
+        }
+        else {
+            // OPTION 3: CANCEL
+            cout << "\n[CANCELLED] Trip aborted. Thank you for using Smart Transport!\n";
+            return 0; // Exit main
+        }
+    }
+
+
 
     cout << "[SUCCESS] Ticket registered!" << '\n';
 
@@ -441,7 +491,7 @@ LIVE NOTIFICATIONS
 ============================================================
 )";
 
-    
+
 
     return 0;
 }
