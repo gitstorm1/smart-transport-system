@@ -3,6 +3,7 @@
 
 using namespace std;
 
+// Encapsulation: constructor initializes internal bus state
 Bus::Bus(string busNum, string busTyp, int cap, double fareRat, double minFare, double maxFare)
     :
     busNumber(busNum),
@@ -12,6 +13,7 @@ Bus::Bus(string busNum, string busTyp, int cap, double fareRat, double minFare, 
     assignedRoute(nullptr) {
 }
 
+// Encapsulated behavior: Bus manages its own movement and boarding logic
 void Bus::move() {
     if (assignedRoute == nullptr) return;
     const auto& stops = assignedRoute->getStops();
@@ -69,6 +71,7 @@ MiniBus::MiniBus(string busNum)
     : Bus(busNum, "Minibus", 26, 3, 50, 100) {
     setOvercrowdingLimit(26 + 45);
 }
+// Runtime polymorphism: each bus type computes fare differently via override
 double MiniBus::calculateFare(double distance) const {
     double fare = min(maximumFare, max(minimumFare, distance * fareRate));
     return fare;

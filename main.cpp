@@ -58,16 +58,41 @@ void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
     allRoutes.push_back(r3);
 }
 
-struct BusFleet {
-    vector<Bus*> allBuses;
+// Composition: BusFleet owns Bus objects
+class BusFleet {
+private:
+    // Encapsulation: The raw data is hidden from the outside world
+    std::vector<Bus*> allBuses;
 
+public:
+    BusFleet() = default;
+
+    // Composition: The Fleet owns the buses and is responsible for their memory.
     ~BusFleet() {
         for (Bus* bus : allBuses) {
             delete bus;
         }
+        allBuses.clear();
+    }
+
+    void addBus(Bus* bus) {
+        if (bus != nullptr) {
+            allBuses.push_back(bus);
+        }
+    }
+
+    const std::vector<Bus*>& getAllBuses() const {
+        return allBuses;
+    }
+
+    void moveAllBuses() {
+        for (Bus* bus : allBuses) {
+            bus->move();
+        }
     }
 };
 
+// Polymorphism: storing derived bus objects as Bus* in a fleet
 BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
     BusFleet fleet;
 
@@ -102,14 +127,14 @@ BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
     }
 
     // Add all buses to fleet
-    fleet.allBuses.push_back(mini1);
-    fleet.allBuses.push_back(mini2);
-    fleet.allBuses.push_back(mini3);
-    fleet.allBuses.push_back(mini4);
-    fleet.allBuses.push_back(electric1);
-    fleet.allBuses.push_back(electric2);
-    fleet.allBuses.push_back(dd1);
-    fleet.allBuses.push_back(dd2);
+    fleet.addBus(mini1);
+    fleet.addBus(mini2);
+    fleet.addBus(mini3);
+    fleet.addBus(mini4);
+    fleet.addBus(electric1);
+    fleet.addBus(electric2);
+    fleet.addBus(dd1);
+    fleet.addBus(dd2);
 
     return fleet;
 }
@@ -188,10 +213,11 @@ set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupS
     return uniqueDropoffStops;
 }
 
+// Polymorphism: selecting buses through the Bus base-class interface
 vector<Bus*> getValidBusesForTrip(const BusFleet& fleet, Stop* pickup, Stop* dropoff) {
     vector<Bus*> valid;
 
-    for (Bus* bus : fleet.allBuses) {
+    for (Bus* bus : fleet.getAllBuses()) {
         Route* r = bus->getAssignedRoute();
         if (!r) continue;
 
@@ -286,10 +312,7 @@ void runSimulation(BusFleet& fleet, Ticket* activeTicket, Bus* selectedBus, Stop
         cin >> command;
 
         if (command == "/tick") {
-            // Move the entire fleet
-            for (Bus* b : fleet.allBuses) {
-                b->move();
-            }
+            fleet.moveAllBuses();
 
             // Check Ticket state
             if (activeTicket->getState() == JourneyState::WAITING_FOR_PICKUP) {

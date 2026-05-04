@@ -5,6 +5,7 @@ using namespace std;
 
 Route::Route(string name) : routeName(name) {}
 
+// Aggregation relationship: adding a Stop pointer to the route
 void Route::addStop(Stop* s, double distance) {
     if (s != nullptr) {
         stops.push_back(s);
@@ -30,6 +31,7 @@ void Route::displayRoute() const {
     }
 }
 
+// Encapsulated route logic: compute distance without exposing internals
 double Route::getDistanceBetween(Stop* start, Stop* end) const {
     if (start == end) return 0.0;
 

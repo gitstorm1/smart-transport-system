@@ -7,6 +7,7 @@
 #include "Route.h"
 #include "Stop.h"
 
+// Encapsulation: bus state is hidden in private/protected members
 class Bus {
 private:
     int currentPassengers;
@@ -17,6 +18,7 @@ protected:
     double fareRate;
     double minimumFare;
     double maximumFare;
+    // Aggregation: Bus holds a non-owning reference to a Route
     Route* assignedRoute;
     int currentStopIndex;
     int maxOvercrowding;
@@ -25,6 +27,7 @@ public:
     Bus(std::string busNum, std::string busTyp, int cap, double fareRat, double minFare, double maxFare);
     virtual ~Bus() {}
 
+    // Abstraction / Polymorphism: base interface for fare calculation
     virtual double calculateFare(double distance) const = 0;
 
     virtual void move();
@@ -49,6 +52,7 @@ public:
 };
 
 // Derived Classes
+// Inheritance: specialized bus types derive from Bus
 class MiniBus : public Bus {
 public:
     MiniBus(std::string busNum);

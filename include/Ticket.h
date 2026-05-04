@@ -4,10 +4,12 @@
 #include "Bus.h"
 #include "Stop.h"
 
+// Abstraction: ticket lifecycle states are represented by an enum
 enum class JourneyState { WAITING_FOR_PICKUP, ON_BOARD, COMPLETED };
 
 class Ticket {
 private:
+    // Aggregation: Ticket references Bus and Stop objects without owning them
     Bus* bookedBus;
     Stop* pickup;
     Stop* dropoff;
@@ -22,6 +24,7 @@ public:
     void setBoarded() { currentState = JourneyState::ON_BOARD; }
     void setCompleted() { currentState = JourneyState::COMPLETED; }
 
+    // Encapsulation: Ticket hides state transitions and checks behind methods
     bool isAtPickup() const {
         return bookedBus->getCurrentStop() == pickup;
     }

@@ -26,6 +26,7 @@ string Stop::getFullName() const {
     return name;
 }
 
+// Friend function implementation can read private Stop members directly
 Stop* findStop(vector<Stop>& masterStops, const string& area, const string& block, const string& landmark) {
     for (auto& s : masterStops) {
         if (s.area == area && 
