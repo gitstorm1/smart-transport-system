@@ -430,7 +430,7 @@ bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses,
         }
 
         if (postSummaryChoice == 2) {
-            cout << "\nRE-SELECTING BUS:\n";
+            cout << "\nRE-SELECTING BUS:\n\n";
             for (size_t i = 0; i < validBuses.size(); ++i) {
                 cout << "[" << i + 1 << "] " << validBuses[i]->getBusNumber()
                     << " (" << validBuses[i]->getBusType() << ")\n";

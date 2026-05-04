@@ -21,7 +21,7 @@ string Stop::getLandmark() const {
 string Stop::getFullName() const {
     string name = area + " (Block " + block + ")";
     if (!landmark.empty()) {
-        name += " - near " + landmark;
+        name += " | Landmark: " + landmark;
     }
     return name;
 }
