@@ -36,29 +36,25 @@ double Route::getDistanceBetween(Stop* start, Stop* end) const {
     auto itStart = find(stops.begin(), stops.end(), start);
     auto itEnd = find(stops.begin(), stops.end(), end);
 
-    if (itStart == stops.end() || itEnd == stops.end()) return -1.0; // Error
+    if (itStart == stops.end() || itEnd == stops.end()) return -1.0;
 
     size_t startIdx = itStart - stops.begin();
     size_t endIdx = itEnd - stops.begin();
 
     if (startIdx < endIdx) {
-        // Sum segments from start to end-1 (forward without wrap)
         double dist = 0.0;
         for (size_t i = startIdx; i < endIdx; ++i) {
             dist += segmentDistances[i];
         }
         return dist;
     } else {
-        // Wrap around: go from startIdx to end (n-1), then 0 to endIdx
         double dist = 0.0;
         size_t stopsSize = stops.size();
         
-        // Sum segments from startIdx to end of route
         for (size_t i = startIdx; i < stopsSize; ++i) {
             dist += segmentDistances[i];
         }
         
-        // Sum segments from start of route to endIdx
         for (size_t i = 0; i < endIdx; ++i) {
             dist += segmentDistances[i];
         }

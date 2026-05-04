@@ -170,7 +170,6 @@ set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pick
     return reachableAreas;
 }
 
-// Get specific stops in a target area reachable from a pickup stop
 set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupStop, const string& targetArea) {
     set<Stop*> uniqueDropoffStops;
     for (const auto& route : allRoutes) {
@@ -213,10 +212,8 @@ bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses,
     bool confirmed = false;
 
     while (!confirmed) {
-        // Calculate Fare for the current selection
         double finalFare = selectedBus->calculateFare(travelDistance);
 
-        // Display the Detailed Summary
         cout << "============================================================\n";
         cout << "                    FINAL TRIP SUMMARY\n";
         cout << "============================================================\n";
@@ -236,7 +233,6 @@ bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses,
         cout << "   TOTAL:     Rs " << finalFare << "\n";
         cout << "============================================================\n";
 
-        // 3 Options
         cout << "\nWHAT WOULD YOU LIKE TO DO?\n";
         cout << "[1] Finalize Payment\n";
         cout << "[2] Change Bus (View List Again)\n";
@@ -256,7 +252,7 @@ bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses,
             } else {
                 cout << "\n[FAILED] Sorry, this bus reached its limit while you were viewing the summary.\n";
                 cout << "Please select another bus.\n\n";
-                postSummaryChoice = 2; // Transition logic: manually set choice to 2 to trigger re-selection
+                postSummaryChoice = 2;
             }
         }
 
@@ -269,14 +265,13 @@ bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses,
             int newChoice = getValidatedChoice("\nSelect your bus (Number): ", (int)validBuses.size());
             selectedBus = validBuses[newChoice - 1];
             cout << "\n------------------------------------------------------------\n\n";
-            // Loop naturally continues to show the new summary
         } 
         else if (postSummaryChoice == 3) {
             cout << "\n[CANCELLED] Trip aborted. Thank you for using Smart Transport!\n";
-            return false; // Tells main to exit the program
+            return false;
         }
     }
-    return true; // Ticket created successfully
+    return true;
 }
 
 void runSimulation(BusFleet& fleet, Ticket* activeTicket, Bus* selectedBus, Stop* pickupStop, Stop* dropoffStop) {
@@ -296,7 +291,7 @@ void runSimulation(BusFleet& fleet, Ticket* activeTicket, Bus* selectedBus, Stop
                 b->move();
             }
 
-            // Check Ticket State
+            // Check Ticket state
             if (activeTicket->getState() == JourneyState::WAITING_FOR_PICKUP) {
                 cout << "\nYour bus (" << selectedBus->getBusNumber() << ") is currently at: "
                     << selectedBus->getCurrentStop()->getFullName() << "\n";
@@ -346,15 +341,12 @@ int main() {
     cout << "              WELCOME TO SMART TRANSPORT\n";
     cout << "============================================================\n";
 
-    // Data containers initialized in main
     vector<Stop> masterStops;
     vector<Route> allRoutes;
 
-    // Call separate functions to populate data
     initializeMasterStops(masterStops);
     initializeRoutes(allRoutes, masterStops);
 
-    // Initialize bus fleet
     BusFleet fleet = initializeMasterBuses(allRoutes);
 
     cout << "AVAILABLE AREAS:\n";
@@ -409,13 +401,11 @@ int main() {
 
     set<Stop*> uniqueDropoffStops = getReachableStopsInArea(allRoutes, pickupStop, dropoffArea);
 
-    // 2. Display the filtered drop-off stops
     cout << "STOPS IN " << dropoffArea << " (REACHABLE FROM \"" << pickupStop->getFullName() << "\"):\n";
     for (int i = 0; const auto& dropoffStop : uniqueDropoffStops) {
         cout << "[" << ++i << "] " << dropoffStop->getFullName() << "\n";
     }
 
-    // 3. Get User Choice
     int dropoffStopChoice = getValidatedChoice("\nEnter your drop-off stop (Number): ", uniqueDropoffStops.size());
     Stop* dropoffStop = *next(uniqueDropoffStops.begin(), dropoffStopChoice - 1);
 
