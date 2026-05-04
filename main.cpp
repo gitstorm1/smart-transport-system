@@ -48,14 +48,15 @@ public:
         return assignedRoute->getStops()[currentStopIndex];
     }
 
-    virtual bool boardPassenger() {
-        int effectiveCapacity = maxOvercrowding;
+    virtual bool canBoardPassenger() const {
+        return currentPassengers < maxOvercrowding;
+    }
 
-        if (currentPassengers < effectiveCapacity) {
+    virtual bool boardPassenger() {
+        if (canBoardPassenger()) {
             ++currentPassengers;
             return true;
         }
-
         return false;
     }
 
@@ -171,33 +172,43 @@ public:
 
 void initializeMasterStops(vector<Stop>& masterStops) {
     masterStops.reserve(100);
-    masterStops.emplace_back("North Sector", "A", "Gate 1", 0.0);
-    masterStops.emplace_back("Downtown", "C", "Central Library", 5.2);
-    masterStops.emplace_back("Industrial Zone", "B", "Steel Mill", 12.5);
-    masterStops.emplace_back("Downtown", "F", "City Hall", 2.1);
-    masterStops.emplace_back("Residential East", "D", "Public Park", 6.8);
+    // Area 1
+    masterStops.emplace_back("Area 1", "1A", "Stop 1");
+    masterStops.emplace_back("Area 1", "1B", "Stop 2");
+    
+    // Area 2
+    masterStops.emplace_back("Area 2", "2A", "Stop 3");
+    masterStops.emplace_back("Area 2", "2B", "Stop 4");
+    
+    // Area 3
+    masterStops.emplace_back("Area 3", "3A", "Stop 5");
+    masterStops.emplace_back("Area 3", "3B", "Stop 6");
 }
 
 void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
-    // Route 1: North-South Express
-    Route r1("North-South Express");
-    r1.addStop(findStop(masterStops, "North Sector", "A", "Gate 1"));
-    r1.addStop(findStop(masterStops, "Downtown", "C", "Central Library"));
-    r1.addStop(findStop(masterStops, "Industrial Zone", "B", "Steel Mill"));
+    // Route 1: Sequential Loop 1
+    Route r1("Route 1 (Short Loop)");
+    // Stop 1 -> Stop 2 (5km), Stop 2 -> Stop 3 (5km), Stop 3 -> Stop 1 (10km)
+    r1.addStop(findStop(masterStops, "Area 1", "1A", "Stop 1"), 5.0);
+    r1.addStop(findStop(masterStops, "Area 1", "1B", "Stop 2"), 5.0);
+    r1.addStop(findStop(masterStops, "Area 2", "2A", "Stop 3"), 10.0); 
     allRoutes.push_back(r1);
 
-    // Route 2: Downtown Circular
-    Route r2("Downtown Loop");
-    r2.addStop(findStop(masterStops, "Downtown", "C", "Central Library"));
-    r2.addStop(findStop(masterStops, "Downtown", "F", "City Hall"));
-    r2.addStop(findStop(masterStops, "Residential East", "D", "Public Park"));
+    // Route 2: Sequential Loop 2
+    Route r2("Route 2 (Long Loop)");
+    // Stop 3 -> Stop 4 (4km), Stop 4 -> Stop 5 (4km), Stop 5 -> Stop 6 (4km), Stop 6 -> Stop 3 (12km)
+    r2.addStop(findStop(masterStops, "Area 2", "2A", "Stop 3"), 4.0);
+    r2.addStop(findStop(masterStops, "Area 2", "2B", "Stop 4"), 4.0);
+    r2.addStop(findStop(masterStops, "Area 3", "3A", "Stop 5"), 4.0);
+    r2.addStop(findStop(masterStops, "Area 3", "3B", "Stop 6"), 12.0);
     allRoutes.push_back(r2);
 
-    // Route 3: Worker's Shuttle
-    Route r3("Industrial Shuttle");
-    r3.addStop(findStop(masterStops, "Residential East", "D", "Public Park"));
-    r3.addStop(findStop(masterStops, "Downtown", "F", "City Hall"));
-    r3.addStop(findStop(masterStops, "Industrial Zone", "B", "Steel Mill"));
+    // Route 3: Cross-Area Shuttle
+    Route r3("Route 3 (Express Loop)");
+    // Stop 1 -> Stop 4 (15km), Stop 4 -> Stop 6 (15km), Stop 6 -> Stop 1 (30km)
+    r3.addStop(findStop(masterStops, "Area 1", "1A", "Stop 1"), 15.0);
+    r3.addStop(findStop(masterStops, "Area 2", "2B", "Stop 4"), 15.0);
+    r3.addStop(findStop(masterStops, "Area 3", "3B", "Stop 6"), 30.0);
     allRoutes.push_back(r3);
 }
 
@@ -307,12 +318,17 @@ set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pick
         auto it = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
 
         if (it != stopsInRoute.end()) {
-            for (auto nextStop = it + 1; nextStop != stopsInRoute.end(); ++nextStop) {
-                reachableAreas.insert((*nextStop)->getArea());
+            size_t pickupIdx = it - stopsInRoute.begin();
+            // Forward from pickup+1 to end
+            for (size_t i = pickupIdx + 1; i < stopsInRoute.size(); ++i) {
+                reachableAreas.insert(stopsInRoute[i]->getArea());
+            }
+            // Then wrap to pickup-1
+            for (size_t i = 0; i < pickupIdx; ++i) {
+                reachableAreas.insert(stopsInRoute[i]->getArea());
             }
         }
     }
-    // MAYBE: Have it respect route order
     return reachableAreas;
 }
 
@@ -321,21 +337,177 @@ set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupS
     set<Stop*> uniqueDropoffStops;
     for (const auto& route : allRoutes) {
         const auto& stopsInRoute = route.getStops();
-
         auto itPickup = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
 
         if (itPickup != stopsInRoute.end()) {
-            // Look at every stop AFTER the pickup stop
-            for (auto itDest = itPickup + 1; itDest != stopsInRoute.end(); ++itDest) {
-                Stop* potentialStop = *itDest;
-
-                if (potentialStop->getArea() == targetArea) {
-                    uniqueDropoffStops.insert(potentialStop);
+            size_t pickupIdx = itPickup - stopsInRoute.begin();
+            // Forward from pickup+1 to end
+            for (size_t i = pickupIdx + 1; i < stopsInRoute.size(); ++i) {
+                if (stopsInRoute[i]->getArea() == targetArea) {
+                    uniqueDropoffStops.insert(stopsInRoute[i]);
+                }
+            }
+            // Then wrap to pickup-1
+            for (size_t i = 0; i < pickupIdx; ++i) {
+                if (stopsInRoute[i]->getArea() == targetArea) {
+                    uniqueDropoffStops.insert(stopsInRoute[i]);
                 }
             }
         }
     }
     return uniqueDropoffStops;
+}
+
+vector<Bus*> getValidBusesForTrip(const BusFleet& fleet, Stop* pickup, Stop* dropoff) {
+    vector<Bus*> valid;
+
+    for (Bus* bus : fleet.allBuses) {
+        Route* r = bus->getAssignedRoute();
+        if (!r) continue;
+
+        const auto& stops = r->getStops();
+        auto itPickup = find(stops.begin(), stops.end(), pickup);
+        auto itDropoff = find(stops.begin(), stops.end(), dropoff);
+
+        if (itPickup != stops.end() && itDropoff != stops.end()) {
+            valid.push_back(bus);
+        }
+    }
+    return valid;
+}
+
+bool handleTripConfirmation(Bus*& selectedBus, const vector<Bus*>& validBuses, 
+                            Stop* pickupStop, Stop* dropoffStop, 
+                            double travelDistance, Ticket*& activeTicket) {
+    bool confirmed = false;
+
+    while (!confirmed) {
+        // Calculate Fare for the current selection
+        double finalFare = selectedBus->calculateFare(travelDistance);
+
+        // Display the Detailed Summary
+        cout << "============================================================\n";
+        cout << "                    FINAL TRIP SUMMARY\n";
+        cout << "============================================================\n";
+        cout << "PICKUP:    " << pickupStop->getFullName() << "\n";
+        cout << "DROPOFF:   " << dropoffStop->getFullName() << "\n";
+        cout << "DISTANCE:  " << travelDistance << " km\n";
+        cout << "------------------------------------------------------------\n";
+        cout << "BUS DETAILS:\n";
+        cout << "   Number:    " << selectedBus->getBusNumber() << "\n";
+        cout << "   Type:      " << selectedBus->getBusType() << "\n";
+        cout << "   Status:    " << (selectedBus->isOvercrowded() ? "Standing Room Only" : "Seats Available") << "\n";
+        cout << "------------------------------------------------------------\n";
+        cout << "FARE DETAILS:\n";
+        cout << "   Rate:      Rs " << selectedBus->getFareRate() << "/km\n";
+        cout << "   Min Fare:  Rs " << selectedBus->getMinimumFare() << "\n";
+        cout << "   Max Fare:  Rs " << selectedBus->getMaximumFare() << "\n";
+        cout << "   TOTAL:     Rs " << finalFare << "\n";
+        cout << "============================================================\n";
+
+        // 3 Options
+        cout << "\nWHAT WOULD YOU LIKE TO DO?\n";
+        cout << "[1] Finalize Payment\n";
+        cout << "[2] Change Bus (View List Again)\n";
+        cout << "[3] Cancel Everything\n\n";
+
+        int postSummaryChoice = getValidatedChoice("Enter choice: ", 3);
+
+        if (postSummaryChoice == 1) {
+            if (selectedBus->canBoardPassenger()) {
+                activeTicket = new Ticket(selectedBus, pickupStop, dropoffStop);
+                
+                cout << "\n[SUCCESS] Payment processed! Ticket registered.\n\n";
+                cout << "Your bus (" << selectedBus->getBusNumber() << ") is on its way.\n";
+                cout << "Please wait at stop \"" << pickupStop->getFullName() << "\".\n";
+
+                confirmed = true; 
+            } else {
+                cout << "\n[FAILED] Sorry, this bus reached its limit while you were viewing the summary.\n";
+                cout << "Please select another bus.\n\n";
+                postSummaryChoice = 2; // Transition logic: manually set choice to 2 to trigger re-selection
+            }
+        }
+
+        if (postSummaryChoice == 2) {
+            cout << "\nRE-SELECTING BUS:\n";
+            for (size_t i = 0; i < validBuses.size(); ++i) {
+                cout << "[" << i + 1 << "] " << validBuses[i]->getBusNumber()
+                    << " (" << validBuses[i]->getBusType() << ")\n";
+            }
+            int newChoice = getValidatedChoice("\nSelect your bus (Number): ", (int)validBuses.size());
+            selectedBus = validBuses[newChoice - 1];
+            cout << "\n------------------------------------------------------------\n\n";
+            // Loop naturally continues to show the new summary
+        } 
+        else if (postSummaryChoice == 3) {
+            cout << "\n[CANCELLED] Trip aborted. Thank you for using Smart Transport!\n";
+            return false; // Tells main to exit the program
+        }
+    }
+    return true; // Ticket created successfully
+}
+
+void runSimulation(BusFleet& fleet, Ticket* activeTicket, Bus* selectedBus, Stop* pickupStop, Stop* dropoffStop) {
+    string command;
+    bool journeyActive = true;
+
+    cout << ">>> SIMULATION STARTED: Waiting for your bus at \"" << pickupStop->getFullName() << "\"\n";
+    cout << "Type '/tick' to advance time.\n";
+
+    while (journeyActive) {
+        cout << "\n[PROMPT]: ";
+        cin >> command;
+
+        if (command == "/tick") {
+            // Move the entire fleet
+            for (Bus* b : fleet.allBuses) {
+                b->move();
+            }
+
+            // Check Ticket State
+            if (activeTicket->getState() == JourneyState::WAITING_FOR_PICKUP) {
+                cout << "\nYour bus (" << selectedBus->getBusNumber() << ") is currently at: "
+                    << selectedBus->getCurrentStop()->getFullName() << "\n";
+
+                if (activeTicket->isAtPickup()) {
+                    cout << "\nNOTIFICATION: Your bus has arrived at \"" << pickupStop->getFullName() << "\"!\n\n";
+
+                    cout << "Options:\n";
+                    cout << "[1] Board Bus\n";
+                    cout << "[2] Cancel Journey\n\n";
+
+                    int boardChoice = getValidatedChoice("Choice: ", 2);
+                    if (boardChoice == 1) {
+                        if (selectedBus->boardPassenger()) {
+                            activeTicket->setBoarded();
+                            cout << "\nYou have boarded the bus!\n";
+                        }
+                        else {
+                            cout << "\nBus is full!\n";
+                        }
+                    }
+                    else {
+                        cout << "\nJourney cancelled.\n";
+                        journeyActive = false;
+                    }
+                }
+            }
+            else if (activeTicket->getState() == JourneyState::ON_BOARD) {
+                cout << "\nYou are on board.\nBus reached stop: " << selectedBus->getCurrentStop()->getFullName() << "\n";
+
+                if (activeTicket->isAtDestination()) {
+                    activeTicket->setCompleted();
+                    cout << "\nSUCCESS: You have reached your destination (" << dropoffStop->getFullName() << ")!\n\n";
+                    cout << "Thank you for using Smart Transport.\n";
+                    journeyActive = false;
+                }
+            }
+        }
+        else {
+            cout << "Unknown command. Use /tick to move buses.\n";
+        }
+    }
 }
 
 int main() {
@@ -373,7 +545,7 @@ int main() {
 
     vector<Stop*> filteredPickupStops = getAllStopsInArea(masterStops, pickupArea);
 
-    for (int i = 0; i < filteredPickupStops.size(); ++i) {
+    for (size_t i = 0; i < filteredPickupStops.size(); ++i) {
         cout << "[" << i + 1 << "] " << filteredPickupStops[i]->getFullName() << '\n';
     }
 
@@ -422,30 +594,16 @@ int main() {
 
     cout << "AVAILABLE BUSES FOR THIS ROUTE:\n";
 
-    vector<Bus*> validBuses;
-    double travelDistance = abs(dropoffStop->getDistance() - pickupStop->getDistance());
-
-    for (Bus* bus : fleet.allBuses) {
-        Route* r = bus->getAssignedRoute();
-        if (!r) continue; // Skip buses with no route assigned
-
-        const auto& stops = r->getStops();
-        auto itPickup = find(stops.begin(), stops.end(), pickupStop);
-        auto itDropoff = find(stops.begin(), stops.end(), dropoffStop);
-
-        // Check if both stops exist on this bus's route AND pickup is before dropoff
-        if (itPickup != stops.end() && itDropoff != stops.end() && itPickup < itDropoff) {
-            validBuses.push_back(bus);
-
-            // Display bus info and the calculated fare for this specific bus type
-            cout << "[" << validBuses.size() << "] "
-                << bus->getBusNumber() << " (" << bus->getBusType() << ")\n";
-        }
-    }
+    vector<Bus*> validBuses = getValidBusesForTrip(fleet, pickupStop, dropoffStop);
 
     if (validBuses.empty()) {
         cout << "No buses currently serving this specific connection.\n";
         return 0;
+    }
+
+    for (size_t i = 0; i < validBuses.size(); ++i) {
+        cout << "[" << i + 1 << "] " << validBuses[i]->getBusNumber() 
+            << " (" << validBuses[i]->getBusType() << ")\n";
     }
 
     int busChoice = getValidatedChoice("\nSelect your bus (Number): ", validBuses.size());
@@ -453,141 +611,16 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
+    double travelDistance = selectedBus->getAssignedRoute()->getDistanceBetween(pickupStop, dropoffStop);
     Ticket* activeTicket = nullptr;
 
-    bool confirmed = false;
-
-    while (!confirmed) {
-        // Calculate Fare for the current selection
-        double finalFare = selectedBus->calculateFare(travelDistance);
-
-        // Display the Detailed Summary
-        cout << "============================================================\n";
-        cout << "                    FINAL TRIP SUMMARY\n";
-        cout << "============================================================\n";
-        cout << "PICKUP:    " << pickupStop->getFullName() << "\n";
-        cout << "DROPOFF:   " << dropoffStop->getFullName() << "\n";
-        cout << "DISTANCE:  " << travelDistance << " km\n";
-        cout << "------------------------------------------------------------\n";
-        cout << "BUS DETAILS:\n";
-        cout << "   Number:    " << selectedBus->getBusNumber() << "\n";
-        cout << "   Type:      " << selectedBus->getBusType() << "\n";
-        cout << "   Status:    " << (selectedBus->isOvercrowded() ? "Standing Room Only" : "Seats Available") << "\n";
-        cout << "------------------------------------------------------------\n";
-        cout << "FARE DETAILS:\n";
-        cout << "   Rate:      Rs " << selectedBus->getFareRate() << "/km\n";
-        cout << "   Min Fare:  Rs " << selectedBus->getMinimumFare() << "\n";
-        cout << "   Max Fare:  Rs " << selectedBus->getMaximumFare() << "\n";
-        cout << "   TOTAL:     Rs " << finalFare << "\n";
-        cout << "============================================================\n";
-
-        // 3 Options
-        cout << "\nWHAT WOULD YOU LIKE TO DO?\n";
-        cout << "[1] Finalize Payment\n";
-        cout << "[2] Change Bus (View List Again)\n";
-        cout << "[3] Cancel Everything\n\n";
-
-        int postSummaryChoice = getValidatedChoice("Enter choice: ", 3);
-
-        if (postSummaryChoice == 1) {
-            // OPTION 1: BOARDING
-            if (selectedBus->boardPassenger()) {
-                activeTicket = new Ticket(selectedBus, pickupStop, dropoffStop);
-                
-                cout << "\n[SUCCESS] Payment processed! Ticket registered.\n\n";
-                cout << "Your bus (" << selectedBus->getBusNumber() << ") is on its way.\n";
-                cout << "Please wait at stop \"" << pickupStop->getFullName() << "\".\n";
-
-                confirmed = true; // Exit the loop
-            }
-            else {
-                cout << "\n[FAILED] Sorry, this bus reached its limit while you were viewing the summary.\n";
-                cout << "Please select another bus.\n\n";
-                // Logic falls through to selection again
-                goto reselect;
-            }
-        }
-        else if (postSummaryChoice == 2) {
-            // OPTION 2: CHANGE BUS
-        reselect: // Label for the re-selection logic
-            cout << "\nRE-SELECTING BUS:\n";
-            for (int i = 0; i < validBuses.size(); ++i) {
-                cout << "[" << i + 1 << "] " << validBuses[i]->getBusNumber()
-                    << " (" << validBuses[i]->getBusType() << ")\n";
-            }
-            int newChoice = getValidatedChoice("\nSelect your bus (Number): ", validBuses.size());
-            selectedBus = validBuses[newChoice - 1];
-            cout << "\n------------------------------------------------------------\n\n";
-            // Loop continues
-        }
-        else {
-            // OPTION 3: CANCEL
-            cout << "\n[CANCELLED] Trip aborted. Thank you for using Smart Transport!\n";
-            return 0; // Exit main
-        }
+    if (!handleTripConfirmation(selectedBus, validBuses, pickupStop, dropoffStop, travelDistance, activeTicket)) {
+        return 0; // Exit if trip was cancelled
     }
 
     cout << "\n------------------------------------------------------------\n\n";
 
-    string command;
-    bool journeyActive = true;
-
-    cout << ">>> SIMULATION STARTED: Waiting for your bus at \"" << pickupStop->getFullName() << "\"\n";
-    cout << "Type '/tick' to advance time.\n";
-
-    while (journeyActive) {
-        cout << "\n[PROMPT]: ";
-        cin >> command;
-
-        if (command == "/tick") {
-            // Move the entire fleet
-            for (Bus* b : fleet.allBuses) {
-                b->move();
-            }
-
-            // Check Ticket State
-            if (activeTicket->getState() == JourneyState::WAITING_FOR_PICKUP) {
-                cout << "\nYour bus (" << selectedBus->getBusNumber() << ") is currently at: "
-                    << selectedBus->getCurrentStop()->getFullName() << "\n";
-
-                if (activeTicket->isAtPickup()) {
-                    cout << "\nNOTIFICATION: Your bus has arrived at \"" << pickupStop->getFullName() << "\"!\n\n";
-
-                    cout << "Options:\n";
-                    cout << "[1] Board Bus\n";
-                    cout << "[2] Cancel Journey\n\n";
-
-                    int boardChoice = getValidatedChoice("Choice: ", 2);
-                    if (boardChoice == 1) {
-                        if (selectedBus->boardPassenger()) {
-                            activeTicket->setBoarded();
-                            cout << "\nYou have boarded the bus!\n";
-                        }
-                        else {
-                            cout << "\nBus is full!\n";
-                        }
-                    }
-                    else {
-                        cout << "\nJourney cancelled.\n";
-                        journeyActive = false;
-                    }
-                }
-            }
-            else if (activeTicket->getState() == JourneyState::ON_BOARD) {
-                cout << "\nYou are on board. Bus reached stop: " << selectedBus->getCurrentStop()->getFullName() << "\n";
-
-                if (activeTicket->isAtDestination()) {
-                    activeTicket->setCompleted();
-                    cout << "\nSUCCESS: You have reached your destination (" << dropoffStop->getFullName() << ")!\n\n";
-                    cout << "Thank you for using Smart Transport.\n";
-                    journeyActive = false;
-                }
-            }
-        }
-        else {
-            cout << "Unknown command. Use /tick to move buses.\n";
-        }
-    }
+    runSimulation(fleet, activeTicket, selectedBus, pickupStop, dropoffStop);
 
     if (activeTicket != nullptr) {
         delete activeTicket;

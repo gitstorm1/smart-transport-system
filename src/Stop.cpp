@@ -3,8 +3,8 @@
 
 using namespace std;
 
-Stop::Stop(string a, string b, string l, float d) 
-    : area(a), block(b), landmark(l), distance(d) {}
+Stop::Stop(string a, string b, string l) 
+    : area(a), block(b), landmark(l) {}
 
 string Stop::getArea() const {
     return area;
@@ -16,10 +16,6 @@ string Stop::getBlock() const {
 
 string Stop::getLandmark() const {
     return landmark;
-}
-
-float Stop::getDistance() const { 
-    return distance; 
 }
 
 string Stop::getFullName() const {

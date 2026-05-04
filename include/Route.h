@@ -9,15 +9,17 @@ class Route {
 private:
     std::string routeName;
     std::vector<Stop*> stops;
+    std::vector<double> segmentDistances;
 
 public:
     Route(std::string name);
 
-    void addStop(Stop* s);
+    void addStop(Stop* s, double distance);
 
     std::vector<Stop*> getStops() const;
 
-    // Displays the whole route (i.e. all stops)
+    double getDistanceBetween(Stop* start, Stop* end) const;
+
     void displayRoute() const;
 };
 
