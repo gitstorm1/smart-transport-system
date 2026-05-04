@@ -14,6 +14,7 @@ using namespace std;
 
 void initializeMasterStops(vector<Stop>& masterStops) {
     masterStops.reserve(100);
+
     // Area 1
     masterStops.emplace_back("Area 1", "1A", "Stop 1");
     masterStops.emplace_back("Area 1", "1B", "Stop 2");
@@ -28,29 +29,32 @@ void initializeMasterStops(vector<Stop>& masterStops) {
 }
 
 void initializeRoutes(vector<Route>& allRoutes, vector<Stop>& masterStops) {
-    // Route 1: Sequential Loop 1
     Route r1("Route 1 (Short Loop)");
+
     // Stop 1 -> Stop 2 (5km), Stop 2 -> Stop 3 (5km), Stop 3 -> Stop 1 (10km)
     r1.addStop(findStop(masterStops, "Area 1", "1A", "Stop 1"), 5.0);
     r1.addStop(findStop(masterStops, "Area 1", "1B", "Stop 2"), 5.0);
-    r1.addStop(findStop(masterStops, "Area 2", "2A", "Stop 3"), 10.0); 
+    r1.addStop(findStop(masterStops, "Area 2", "2A", "Stop 3"), 10.0);
+
     allRoutes.push_back(r1);
 
-    // Route 2: Sequential Loop 2
     Route r2("Route 2 (Long Loop)");
+
     // Stop 3 -> Stop 4 (4km), Stop 4 -> Stop 5 (4km), Stop 5 -> Stop 6 (4km), Stop 6 -> Stop 3 (12km)
     r2.addStop(findStop(masterStops, "Area 2", "2A", "Stop 3"), 4.0);
     r2.addStop(findStop(masterStops, "Area 2", "2B", "Stop 4"), 4.0);
     r2.addStop(findStop(masterStops, "Area 3", "3A", "Stop 5"), 4.0);
     r2.addStop(findStop(masterStops, "Area 3", "3B", "Stop 6"), 12.0);
+
     allRoutes.push_back(r2);
 
-    // Route 3: Cross-Area Shuttle
     Route r3("Route 3 (Express Loop)");
+
     // Stop 1 -> Stop 4 (15km), Stop 4 -> Stop 6 (15km), Stop 6 -> Stop 1 (30km)
     r3.addStop(findStop(masterStops, "Area 1", "1A", "Stop 1"), 15.0);
     r3.addStop(findStop(masterStops, "Area 2", "2B", "Stop 4"), 15.0);
     r3.addStop(findStop(masterStops, "Area 3", "3B", "Stop 6"), 30.0);
+
     allRoutes.push_back(r3);
 }
 
@@ -64,7 +68,6 @@ struct BusFleet {
     }
 };
 
-// Initialize all buses and assign to routes
 BusFleet initializeMasterBuses(vector<Route>& allRoutes) {
     BusFleet fleet;
 
@@ -132,7 +135,6 @@ int getValidatedChoice(string prompt, int maxRange) {
     }
 }
 
-// Get all unique areas from the master list
 set<string> getAllUniqueAreas(const vector<Stop>& masterStops) {
     set<string> uniqueAreas;
     for (const auto& s : masterStops) {
@@ -141,7 +143,6 @@ set<string> getAllUniqueAreas(const vector<Stop>& masterStops) {
     return uniqueAreas;
 }
 
-// Get all stops within a specific area
 vector<Stop*> getAllStopsInArea(vector<Stop>& masterStops, const string& targetArea) {
     vector<Stop*> filtered;
     for (auto& stop : masterStops) {
@@ -152,7 +153,6 @@ vector<Stop*> getAllStopsInArea(vector<Stop>& masterStops, const string& targetA
     return filtered;
 }
 
-// Get unique areas reachable after a specific pickup stop
 set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pickupStop) {
     set<string> reachableAreas;
     for (const auto& route : allRoutes) {
@@ -160,14 +160,10 @@ set<string> getReachableAreasFromStop(const vector<Route>& allRoutes, Stop* pick
         auto it = find(stopsInRoute.begin(), stopsInRoute.end(), pickupStop);
 
         if (it != stopsInRoute.end()) {
-            size_t pickupIdx = it - stopsInRoute.begin();
-            // Forward from pickup+1 to end
-            for (size_t i = pickupIdx + 1; i < stopsInRoute.size(); ++i) {
-                reachableAreas.insert(stopsInRoute[i]->getArea());
-            }
-            // Then wrap to pickup-1
-            for (size_t i = 0; i < pickupIdx; ++i) {
-                reachableAreas.insert(stopsInRoute[i]->getArea());
+            for (Stop* s : stopsInRoute) {
+                if (s != pickupStop) {
+                    reachableAreas.insert(s->getArea());
+                }
             }
         }
     }
@@ -183,16 +179,9 @@ set<Stop*> getReachableStopsInArea(const vector<Route>& allRoutes, Stop* pickupS
 
         if (itPickup != stopsInRoute.end()) {
             size_t pickupIdx = itPickup - stopsInRoute.begin();
-            // Forward from pickup+1 to end
-            for (size_t i = pickupIdx + 1; i < stopsInRoute.size(); ++i) {
-                if (stopsInRoute[i]->getArea() == targetArea) {
-                    uniqueDropoffStops.insert(stopsInRoute[i]);
-                }
-            }
-            // Then wrap to pickup-1
-            for (size_t i = 0; i < pickupIdx; ++i) {
-                if (stopsInRoute[i]->getArea() == targetArea) {
-                    uniqueDropoffStops.insert(stopsInRoute[i]);
+            for (Stop* s : stopsInRoute) {
+                if (s != pickupStop && s->getArea() == targetArea) {
+                    uniqueDropoffStops.insert(s);
                 }
             }
         }
