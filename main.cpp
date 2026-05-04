@@ -20,6 +20,7 @@ protected:
     double minimumFare;
     double maximumFare;
     Route* assignedRoute;
+    int currentStopIndex;
     int maxOvercrowding;  // Maximum passengers, including those standing (overcrowding)
 
 public:
@@ -27,7 +28,7 @@ public:
         :
         busNumber(busNum),
         busType(busTyp),
-        capacity(cap), maxOvercrowding(cap), currentPassengers(0),
+        capacity(cap), maxOvercrowding(cap), currentPassengers(0), currentStopIndex(0),
         fareRate(fareRat), minimumFare(minFare), maximumFare(maxFare),
         assignedRoute(nullptr) {
     }
@@ -35,6 +36,17 @@ public:
     virtual ~Bus() {}
 
     virtual double calculateFare(double distance) const = 0;
+
+    virtual void move() {
+        if (assignedRoute == nullptr) return;
+        const auto& stops = assignedRoute->getStops();
+        currentStopIndex = (currentStopIndex + 1) % stops.size();
+    }
+
+    virtual Stop* getCurrentStop() const {
+        if (!assignedRoute) return nullptr;
+        return assignedRoute->getStops()[currentStopIndex];
+    }
 
     virtual bool boardPassenger() {
         int effectiveCapacity = maxOvercrowding;
@@ -127,6 +139,33 @@ public:
     double calculateFare(double distance) const override {
         double fare = min(maximumFare, max(minimumFare, distance * fareRate));
         return fare;
+    }
+};
+
+enum class JourneyState { WAITING_FOR_PICKUP, ON_BOARD, COMPLETED };
+
+class Ticket {
+private:
+    Bus* bookedBus;
+    Stop* pickup;
+    Stop* dropoff;
+    JourneyState currentState;
+
+public:
+    Ticket(Bus* b, Stop* p, Stop* d) 
+        : bookedBus(b), pickup(p), dropoff(d), currentState(JourneyState::WAITING_FOR_PICKUP) {}
+
+    Bus* getBus() const { return bookedBus; }
+    JourneyState getState() const { return currentState; }
+    void setBoarded() { currentState = JourneyState::ON_BOARD; }
+    void setCompleted() { currentState = JourneyState::COMPLETED; }
+
+    bool isAtPickup() const {
+        return bookedBus->getCurrentStop() == pickup;
+    }
+
+    bool isAtDestination() const {
+        return bookedBus->getCurrentStop() == dropoff;
     }
 };
 
@@ -368,7 +407,7 @@ int main() {
     set<Stop*> uniqueDropoffStops = getReachableStopsInArea(allRoutes, pickupStop, dropoffArea);
 
     // 2. Display the filtered drop-off stops
-    cout << "STOPS IN " << dropoffArea << " (REACHABLE FROM " << pickupStop->getArea() << "):\n";
+    cout << "STOPS IN " << dropoffArea << " (REACHABLE FROM \"" << pickupStop->getFullName() << "\"):\n";
     for (int i = 0; const auto& dropoffStop : uniqueDropoffStops) {
         cout << "[" << ++i << "] " << dropoffStop->getFullName() << "\n";
     }
@@ -414,6 +453,8 @@ int main() {
 
     cout << "\n------------------------------------------------------------\n\n";
 
+    Ticket* activeTicket = nullptr;
+
     bool confirmed = false;
 
     while (!confirmed) {
@@ -442,7 +483,7 @@ int main() {
 
         // 3 Options
         cout << "\nWHAT WOULD YOU LIKE TO DO?\n";
-        cout << "[1] Finalize Payment and Board\n";
+        cout << "[1] Finalize Payment\n";
         cout << "[2] Change Bus (View List Again)\n";
         cout << "[3] Cancel Everything\n\n";
 
@@ -451,8 +492,12 @@ int main() {
         if (postSummaryChoice == 1) {
             // OPTION 1: BOARDING
             if (selectedBus->boardPassenger()) {
-                cout << "\n[SUCCESS] Payment processed. You have boarded " << selectedBus->getBusNumber() << "!\n";
-                // Logic for ticket here
+                activeTicket = new Ticket(selectedBus, pickupStop, dropoffStop);
+                
+                cout << "\n[SUCCESS] Payment processed! Ticket registered.\n\n";
+                cout << "Your bus (" << selectedBus->getBusNumber() << ") is on its way.\n";
+                cout << "Please wait at stop \"" << pickupStop->getFullName() << "\".\n";
+
                 confirmed = true; // Exit the loop
             }
             else {
@@ -482,16 +527,71 @@ int main() {
         }
     }
 
+    cout << "\n------------------------------------------------------------\n\n";
 
+    string command;
+    bool journeyActive = true;
 
-    cout << "[SUCCESS] Ticket registered!" << '\n';
+    cout << ">>> SIMULATION STARTED: Waiting for your bus at \"" << pickupStop->getFullName() << "\"\n";
+    cout << "Type '/tick' to advance time.\n";
 
-    cout << R"(============================================================
-LIVE NOTIFICATIONS
-============================================================
-)";
+    while (journeyActive) {
+        cout << "\n[PROMPT]: ";
+        cin >> command;
 
+        if (command == "/tick") {
+            // Move the entire fleet
+            for (Bus* b : fleet.allBuses) {
+                b->move();
+            }
 
+            // Check Ticket State
+            if (activeTicket->getState() == JourneyState::WAITING_FOR_PICKUP) {
+                cout << "\nYour bus (" << selectedBus->getBusNumber() << ") is currently at: "
+                    << selectedBus->getCurrentStop()->getFullName() << "\n";
+
+                if (activeTicket->isAtPickup()) {
+                    cout << "\nNOTIFICATION: Your bus has arrived at \"" << pickupStop->getFullName() << "\"!\n\n";
+
+                    cout << "Options:\n";
+                    cout << "[1] Board Bus\n";
+                    cout << "[2] Cancel Journey\n\n";
+
+                    int boardChoice = getValidatedChoice("Choice: ", 2);
+                    if (boardChoice == 1) {
+                        if (selectedBus->boardPassenger()) {
+                            activeTicket->setBoarded();
+                            cout << "\nYou have boarded the bus!\n";
+                        }
+                        else {
+                            cout << "\nBus is full!\n";
+                        }
+                    }
+                    else {
+                        cout << "\nJourney cancelled.\n";
+                        journeyActive = false;
+                    }
+                }
+            }
+            else if (activeTicket->getState() == JourneyState::ON_BOARD) {
+                cout << "\nYou are on board. Bus reached stop: " << selectedBus->getCurrentStop()->getFullName() << "\n";
+
+                if (activeTicket->isAtDestination()) {
+                    activeTicket->setCompleted();
+                    cout << "\nSUCCESS: You have reached your destination (" << dropoffStop->getFullName() << ")!\n\n";
+                    cout << "Thank you for using Smart Transport.\n";
+                    journeyActive = false;
+                }
+            }
+        }
+        else {
+            cout << "Unknown command. Use /tick to move buses.\n";
+        }
+    }
+
+    if (activeTicket != nullptr) {
+        delete activeTicket;
+    }
 
     return 0;
 }
